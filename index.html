@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>썸 판별기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f9f9f9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1,
+        label,
+        input,
+        button,
+        #result {
+            text-align: center;
+        }
+
+        #formArea {
+            display: none;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 첫 화면: 시작하기 버튼만 보임 -->
+    <div id="welcome">
+        <button onclick="showSetup()">시작하기</button>
+    </div>
+
+    <!-- 숨겨진 설정 영역 -->
+    <div id="setup" class="hidden">
+        <h1>썸 판별기</h1>
+        <label>지금까지 몇 번을 만났나요?</label>
+        <input type="number" id="loopCount"><br>
+        <button onclick="start()">다음</button>
+    </div>
+
+    <div id="formArea"></div>
+    <div id="result"></div>
+
+    <script>
+        let count = 0;
+        let heart = 0;
+
+        function showSetup() {
+            document.getElementById("welcome").style.display = "none";
+            document.getElementById("setup").classList.remove("hidden");
+        }
+
+        function drunk(count, alcohol, add_people) {
+            if (alcohol === 'Yes' || alcohol === 'yes') {
+                count += 1;
+                if (add_people === 'Yes' || add_people === 'yes') {
+                    count -= 1;
+                } else {
+                    count += 1;
+                }
+            }
+            return count;
+        }
+
+        function YesOrNo(count) {
+            return count > 2 ? 1 : 0;
+        }
+
+        function success(heart) {
+            if (heart === 1) {
+                return "🎉 축하합니다. 썸입니다. 앞으로 처신 잘 하십시오.";
+            } else {
+                return "😢 다음 기회가 있을 것입니다...";
+            }
+        }
+
+        function promise(count, time) {
+            if (time > 3) {
+                count += 1;
+                if (time > 7) {
+                    count += 1;
+                }
+            } else {
+                count -= 1;
+            }
+            return count;
+        }
+
+        function selectOption(id, value) {
+            document.getElementById(id).value = value;
+
+            // 버튼 스타일 업데이트
+            const parent = document.getElementById(id).parentElement;
+            const buttons = parent.querySelectorAll("button");
+            buttons.forEach(btn => {
+                btn.style.backgroundColor = (btn.textContent === value) ? "#4CAF50" : "";
+                btn.style.color = (btn.textContent === value) ? "white" : "";
+            });
+        }
+
+        function start() {
+            const loop = parseInt(document.getElementById("loopCount").value);
+            const formArea = document.getElementById("formArea");
+            formArea.innerHTML = '';
+            formArea.style.display = 'block';
+
+            for (let i = 0; i < loop; i++) {
+                formArea.innerHTML += `
+      <h3>${i + 1}번째 만남</h3>
+      <label>약속 시간 (시간):</label>
+      <input type="number" id="time${i}">
+
+      <label>단 둘이 술을 마셨나요? (Yes/No):</label>
+      <div>
+        <button type="button" onclick="selectOption('alcohol${i}', 'Yes')">Yes</button>
+        <button type="button" onclick="selectOption('alcohol${i}', 'No')">No</button>
+        <input type="hidden" id="alcohol${i}">
+      </div>
+
+      <label>다음 약속 잡았나요? (Yes/No):</label>
+      <div>
+        <button type="button" onclick="selectOption('next${i}', 'Yes')">Yes</button>
+        <button type="button" onclick="selectOption('next${i}', 'No')">No</button>
+        <input type="hidden" id="next${i}">
+      </div>
+
+      <label>그 약속에 다른 사람 있나요? (Yes/No):</label>
+      <div>
+        <button type="button" onclick="selectOption('add_people${i}', 'Yes')">Yes</button>
+        <button type="button" onclick="selectOption('add_people${i}', 'No')">No</button>
+        <input type="hidden" id="add_people${i}">
+      </div>
+      <br><br>
+    `;
+            }
+
+            // ✅ 안전한 방식으로 버튼 추가
+            const evalBtn = document.createElement("button");
+            evalBtn.textContent = "결과 보기";
+            evalBtn.onclick = () => evaluate(loop);
+            formArea.appendChild(evalBtn);
+        }
+
+
+        function evaluate(loop) {
+            count = 0;
+            for (let i = 0; i < loop; i++) {
+                const timeInput = document.getElementById(`time${i}`);
+                const alcohol = document.getElementById(`alcohol${i}`).value;
+                const next = document.getElementById(`next${i}`).value;
+                const add_people = document.getElementById(`add_people${i}`).value;
+
+                const time = parseInt(timeInput.value);
+                if (isNaN(time) || alcohol === '' || next === '' || add_people === '') {
+                    alert(`${i + 1}번째 만남의 모든 항목을 입력해 주세요.`);
+                    return;
+                }
+
+                if (next === 'Yes' || next === 'yes') {
+                    count = drunk(count, alcohol, add_people);
+                }
+                count = promise(count, time);
+            }
+
+            heart = YesOrNo(count);
+            const resultText = success(heart);
+            document.getElementById("result").innerHTML = `<h2>${resultText}</h2>`;
+            alert(resultText);  // ✅ 결과를 알림창으로도 보여줌
+        }
+
+
+    </script>
+</body>
+
+</html>
